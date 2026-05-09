@@ -127,15 +127,60 @@ def copy_assets(referenced, extracted_dir: Path, out_dir: Path):
     return copied
 
 
-def safe_rmtree(path: Path) -> None:
-    """Remove a directory tree, retrying after chmod on read-only files.
+def safe_rmtree(path: Path, force: bool = False) -> None:
+    """Remove a directory tree safely.
 
-    On Windows, ``shutil.rmtree`` can fail with ``PermissionError`` when
-    files inside the tree have the read-only attribute set (common for
-    ``.git/objects``, files extracted from ZIP archives, etc.). This
-    helper uses the ``onerror`` callback to make the path writable and
-    retry the failing operation.
+    1. Refuses to delete protected paths (home dir, system dirs, CWD).
+    2. Warns and lists contents before deleting non-project directories
+       unless ``force`` is True.
+    3. Retries after chmod on read-only files (Windows).
     """
+    resolved = path.resolve()
+
+    # --- Protected path checks (never allowed, even with --force) ---
+    home = Path.home().resolve()
+    if resolved == home or str(resolved).startswith(str(home) + os.sep):
+        print(f'error: refusing to delete home directory or its contents: {path}', file=sys.stderr)
+        sys.exit(1)
+
+    cwd = Path.cwd().resolve()
+    if resolved == cwd:
+        print(f'error: refusing to delete current working directory: {path}', file=sys.stderr)
+        sys.exit(1)
+
+    # System directories (Windows)
+    system_roots = [
+        Path(os.environ.get('SystemRoot', r'C:\Windows')).resolve(),
+        Path(r'C:\Program Files').resolve(),
+        Path(r'C:\Program Files (x86)').resolve(),
+        Path(r'C:\ProgramData').resolve(),
+    ]
+    for sys_root in system_roots:
+        if resolved == sys_root or str(resolved).startswith(str(sys_root) + os.sep):
+            print(f'error: refusing to delete system directory: {path}', file=sys.stderr)
+            sys.exit(1)
+
+    # Unix root
+    if resolved == Path('/').resolve():
+        print('error: refusing to delete root directory', file=sys.stderr)
+        sys.exit(1)
+
+    # --- Project-directory heuristic (skip if force) ---
+    if not force and path.is_dir():
+        looks_like_project = any((path / marker).exists() for marker in ('package.json', 'src', 'vite.config.ts', 'tsconfig.json'))
+        if not looks_like_project:
+            item_count = sum(1 for _ in path.rglob('*'))
+            print(f'warning: {path} does not look like a project directory ({item_count} items)', file=sys.stderr)
+            print(f'  Pass --force to overwrite anyway.', file=sys.stderr)
+            sys.exit(1)
+
+    # --- Log and delete ---
+    if path.is_dir():
+        item_count = sum(1 for _ in path.rglob('*'))
+        print(f'Removing existing directory: {path} ({item_count} items)...')
+    else:
+        print(f'Removing existing file: {path}...')
+
     def onerror(func, filepath, exc_info):
         if not os.access(filepath, os.W_OK):
             os.chmod(filepath, stat.S_IWUSR)
@@ -150,10 +195,11 @@ def main():
     ap.add_argument('--decoded', required=True, type=Path)
     ap.add_argument('--extracted', required=True, type=Path)
     ap.add_argument('--out', required=True, type=Path)
+    ap.add_argument('--force', action='store_true', help='allow overwriting non-project directories')
     args = ap.parse_args()
 
     if args.out.exists():
-        safe_rmtree(args.out)
+        safe_rmtree(args.out, force=args.force)
     args.out.mkdir(parents=True)
 
     with args.decoded.open() as f:

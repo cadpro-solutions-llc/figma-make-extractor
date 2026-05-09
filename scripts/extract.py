@@ -57,6 +57,7 @@ def main():
     ap.add_argument('output', type=Path, help='directory to create the project in')
     ap.add_argument('--name', help='project name (defaults to slug of .make filename)')
     ap.add_argument('--no-build', action='store_true', help='skip npm install + build verification')
+    ap.add_argument('--force', action='store_true', help='allow overwriting an existing non-project directory (dangerous!)')
     args = ap.parse_args()
 
     if not args.input.exists():
@@ -95,12 +96,15 @@ def main():
         run(['node', str(SCRIPT_DIR / 'decode_canvas.js'), str(canvas_fig), str(decoded_json)])
 
         # 3. Reconstruct
-        run([
+        reconstruct_cmd = [
             'python3', str(SCRIPT_DIR / 'reconstruct.py'),
             '--decoded', str(decoded_json),
             '--extracted', str(extracted),
             '--out', str(args.output),
-        ])
+        ]
+        if args.force:
+            reconstruct_cmd.append('--force')
+        run(reconstruct_cmd)
 
         # 4. Scaffold
         run([
