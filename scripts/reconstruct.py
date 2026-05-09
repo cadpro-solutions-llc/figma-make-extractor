@@ -21,7 +21,6 @@ import re
 import shutil
 import stat
 import sys
-import sys
 from pathlib import Path
 
 # Files Figma includes inside the canvas tree that we'll regenerate from scratch
