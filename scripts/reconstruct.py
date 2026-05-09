@@ -16,8 +16,11 @@ Usage:
 """
 import argparse
 import json
+import os
 import re
 import shutil
+import stat
+import sys
 import sys
 from pathlib import Path
 
@@ -125,6 +128,24 @@ def copy_assets(referenced, extracted_dir: Path, out_dir: Path):
     return copied
 
 
+def safe_rmtree(path: Path) -> None:
+    """Remove a directory tree, retrying after chmod on read-only files.
+
+    On Windows, ``shutil.rmtree`` can fail with ``PermissionError`` when
+    files inside the tree have the read-only attribute set (common for
+    ``.git/objects``, files extracted from ZIP archives, etc.). This
+    helper uses the ``onerror`` callback to make the path writable and
+    retry the failing operation.
+    """
+    def onerror(func, filepath, exc_info):
+        if not os.access(filepath, os.W_OK):
+            os.chmod(filepath, stat.S_IWUSR)
+            func(filepath)
+        else:
+            raise
+    shutil.rmtree(path, onerror=onerror)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--decoded', required=True, type=Path)
@@ -133,7 +154,7 @@ def main():
     args = ap.parse_args()
 
     if args.out.exists():
-        shutil.rmtree(args.out)
+        safe_rmtree(args.out)
     args.out.mkdir(parents=True)
 
     with args.decoded.open() as f:
