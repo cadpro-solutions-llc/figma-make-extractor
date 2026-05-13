@@ -34,7 +34,22 @@ def slugify(s: str) -> str:
     return ''.join(out).strip('-') or 'figma-make-project'
 
 
+def _resolve(cmd):
+    """Resolve cmd[0] via PATH/PATHEXT so Windows can find .cmd shims (npm, npx) and
+    Python launchers. Falls back to the original name if shutil.which can't find it."""
+    exe = cmd[0]
+    # On Windows there's no `python3` shim by default; rewrite to whatever Python
+    # is actually running this orchestrator so child scripts use the same interpreter.
+    if exe == 'python3':
+        return [sys.executable, *cmd[1:]]
+    resolved = shutil.which(exe)
+    if resolved:
+        return [resolved, *cmd[1:]]
+    return cmd
+
+
 def run(cmd, cwd=None, check=True):
+    cmd = _resolve(list(cmd))
     print(f'\n$ {" ".join(str(c) for c in cmd)}')
     result = subprocess.run(cmd, cwd=cwd, check=False)
     if check and result.returncode != 0:
@@ -147,7 +162,7 @@ def main():
                 file=sys.stderr,
             )
             sys.exit(rc)
-        print('\n✓ Build succeeded.')
+        print('\nBuild succeeded.')
 
     print(f'\nDone. Project at: {args.output}')
     print(f'Run it with:  cd {args.output} && npm run dev')

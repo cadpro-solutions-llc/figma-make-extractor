@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Read(//tmp/**)",
+      "Bash(/c/Users/byronblatteljc/scoop/apps/nodejs-lts/current/npm.cmd run *)",
+      "mcp__Claude_in_Chrome__list_connected_browsers"
+    ]
+  }
+}

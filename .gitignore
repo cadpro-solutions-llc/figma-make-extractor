@@ -1,3 +1,4 @@
+samples/
 scripts/node_modules/
 scripts/package-lock.json
 __pycache__/

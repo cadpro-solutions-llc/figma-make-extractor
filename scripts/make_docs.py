@@ -35,7 +35,7 @@ def load_chat(extracted: Path):
     if not chat_path.exists():
         return None
     try:
-        return json.loads(chat_path.read_text())
+        return json.loads(chat_path.read_text(encoding='utf-8'))
     except Exception as e:
         print(f'warning: could not parse ai_chat.json ({e})', file=sys.stderr)
         return None
@@ -46,7 +46,7 @@ def load_meta(extracted: Path):
     if not meta_path.exists():
         return {}
     try:
-        return json.loads(meta_path.read_text())
+        return json.loads(meta_path.read_text(encoding='utf-8'))
     except Exception:
         return {}
 
@@ -261,17 +261,18 @@ def main():
     has_chat = chat is not None
 
     # Chat archive (full)
-    (docs_dir / 'figma-make-history.md').write_text(render_chat_archive(chat))
+    (docs_dir / 'figma-make-history.md').write_text(render_chat_archive(chat), encoding='utf-8', newline='\n')
 
     # Standalone design brief
-    (docs_dir / 'design-brief.md').write_text(render_design_brief(first_prompt, args.name))
+    (docs_dir / 'design-brief.md').write_text(render_design_brief(first_prompt, args.name), encoding='utf-8', newline='\n')
 
     # README
-    (args.project / 'README.md').write_text(render_readme(args.name, has_chat))
+    (args.project / 'README.md').write_text(render_readme(args.name, has_chat), encoding='utf-8', newline='\n')
 
     # CLAUDE.md
     (args.project / 'CLAUDE.md').write_text(
-        render_claude_md(args.name, meta, has_chat, args.project / 'src')
+        render_claude_md(args.name, meta, has_chat, args.project / 'src'),
+        encoding='utf-8', newline='\n',
     )
 
     print('Wrote README.md, CLAUDE.md, docs/design-brief.md, docs/figma-make-history.md')

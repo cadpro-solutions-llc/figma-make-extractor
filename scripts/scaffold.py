@@ -63,8 +63,11 @@ KNOWN_VERSIONS = {
     'react-resizable-panels': '^2.1.0',
     'vaul': '^1.0.0',
     'canvas-confetti': '^1.9.3',
-    'react-router-dom': '^6.27.0',
-    'react-router': '^6.27.0',
+    # React Router v7 unifies DOM exports into the `react-router` package, so
+    # Figma Make projects (which import Link/Outlet/useLocation/createBrowserRouter/
+    # RouterProvider directly from "react-router") need v7, not v6.
+    'react-router-dom': '^7.1.0',
+    'react-router': '^7.1.0',
     'react-dnd': '^16.0.1',
     'react-dnd-html5-backend': '^16.0.1',
 }
@@ -83,7 +86,7 @@ def collect_imports(src_dir: Path) -> set[str]:
     for ext in ('*.ts', '*.tsx', '*.js', '*.jsx', '*.mjs', '*.cjs'):
         for f in src_dir.rglob(ext):
             try:
-                text = f.read_text()
+                text = f.read_text(encoding='utf-8')
             except Exception:
                 continue
             for m in JS_IMPORT_RE.finditer(text):
@@ -100,7 +103,7 @@ def collect_imports(src_dir: Path) -> set[str]:
     # CSS files can also pull in npm packages (e.g. tw-animate-css)
     for css in src_dir.rglob('*.css'):
         try:
-            text = css.read_text()
+            text = css.read_text(encoding='utf-8')
         except Exception:
             continue
         for m in CSS_IMPORT_RE.finditer(text):
@@ -152,7 +155,7 @@ def main():
     has_tailwind_v4 = False
     for css in src.rglob('*.css'):
         try:
-            text = css.read_text()
+            text = css.read_text(encoding='utf-8')
         except Exception:
             continue
         if '@tailwind' in text or "@import 'tailwindcss'" in text or '@import "tailwindcss"' in text or '@theme' in text or '@custom-variant' in text:
@@ -188,7 +191,7 @@ def main():
         'dependencies': deps,
         'devDependencies': dev_deps,
     }
-    (args.project / 'package.json').write_text(json.dumps(pkg_json, indent=2) + '\n')
+    (args.project / 'package.json').write_text(json.dumps(pkg_json, indent=2) + '\n', encoding='utf-8', newline='\n')
 
     plugin_imports = ["import react from '@vitejs/plugin-react';"]
     plugin_calls = ['react()']
@@ -207,7 +210,7 @@ def main():
         + '  },\n'
         + '});\n'
     )
-    (args.project / 'vite.config.ts').write_text(vite_config)
+    (args.project / 'vite.config.ts').write_text(vite_config, encoding='utf-8', newline='\n')
 
     tsconfig = {
         'compilerOptions': {
@@ -232,7 +235,7 @@ def main():
         'include': ['src'],
         'references': [{'path': './tsconfig.node.json'}],
     }
-    (args.project / 'tsconfig.json').write_text(json.dumps(tsconfig, indent=2) + '\n')
+    (args.project / 'tsconfig.json').write_text(json.dumps(tsconfig, indent=2) + '\n', encoding='utf-8', newline='\n')
 
     tsconfig_node = {
         'compilerOptions': {
@@ -245,7 +248,7 @@ def main():
         },
         'include': ['vite.config.ts'],
     }
-    (args.project / 'tsconfig.node.json').write_text(json.dumps(tsconfig_node, indent=2) + '\n')
+    (args.project / 'tsconfig.node.json').write_text(json.dumps(tsconfig_node, indent=2) + '\n', encoding='utf-8', newline='\n')
 
     (args.project / 'index.html').write_text(
         f'<!doctype html>\n'
@@ -259,7 +262,8 @@ def main():
         f'    <div id="root"></div>\n'
         f'    <script type="module" src="/src/main.tsx"></script>\n'
         f'  </body>\n'
-        f'</html>\n'
+        f'</html>\n',
+        encoding='utf-8', newline='\n',
     )
 
     css_entry = find_css_entry(src)
@@ -279,7 +283,8 @@ def main():
 
     # Helpful .gitignore
     (args.project / '.gitignore').write_text(
-        'node_modules/\ndist/\n.vite/\n.DS_Store\n*.log\n'
+        'node_modules/\ndist/\n.vite/\n.DS_Store\n*.log\n',
+        encoding='utf-8', newline='\n',
     )
 
     print(f'Detected {len(deps)} runtime deps; tailwind v4 detected: {has_tailwind_v4}')

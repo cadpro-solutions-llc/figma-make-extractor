@@ -202,7 +202,7 @@ def main():
         safe_rmtree(args.out, force=args.force)
     args.out.mkdir(parents=True)
 
-    with args.decoded.open() as f:
+    with args.decoded.open(encoding='utf-8') as f:
         data = json.load(f)
 
     written = 0
@@ -232,7 +232,7 @@ def main():
 
         target = args.out / rel
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(src)
+        target.write_text(src, encoding='utf-8', newline='')
         written += 1
 
     copied = copy_assets(referenced_assets, args.extracted, args.out)

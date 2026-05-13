@@ -83,11 +83,22 @@ Most Figma Make projects use Tailwind v4 with `@tailwindcss/vite`. The skill det
 
 If `npm run build` fails after extraction, the most common causes are:
 
+- **React Router version** — Figma Make projects are written for react-router v7, which unifies the DOM exports (`Link`, `Outlet`, `useLocation`, `useNavigate`, `createBrowserRouter`, `RouterProvider`, etc.) into the `"react-router"` package. The skill pins `^7.1.0`. If you see the runtime error `useLocation() may be used only in the context of a <Router> component`, the project almost certainly ended up on v6 (where those exports live in `"react-router-dom"`). Bump `react-router` to `^7.1.0` in `package.json` and reinstall.
 - A version pin in the skill's `KNOWN_VERSIONS` table is out of date — try changing the relevant entry in `package.json` to `latest` and rerunning `npm install`.
 - A package is imported only inside a string template or dynamic import that the regex didn't catch. Check the build error for the missing module and add it to `package.json`.
 - The project relies on a Figma-specific runtime feature beyond `figma:asset` (rare). Inspect the failing source file for unfamiliar imports.
 
 In all cases, the source files are already on disk in the output directory, so the user can keep iterating without re-running the whole pipeline.
+
+## Known issues and caveats
+
+See `references/known-issues.md` for a detailed audit of bugs and limitations discovered during code review. Summary:
+
+- **Decoder error handling**: `decode_canvas.js` does not catch errors from `pako.inflateRaw()` or `fzstd.decompress()` — corrupted `.make` files produce raw stack traces rather than clean messages.
+- **ESM `__dirname`**: The generated `vite.config.ts` uses `__dirname` in an ESM context. Vite currently polyfills this, but it is not spec-compliant.
+- **Path traversal**: `reconstruct.py` does not sanitize `..` in `CODE_FILE` paths. Low risk for trusted exports.
+- **CSS `@import url()`**: The dependency detector misses `@import url('pkg')` syntax. Check CSS files manually if packages seem missing.
+- **KeyError in docs**: `make_docs.py` may crash on malformed `ai_chat.json` entries missing `contentJson`.
 
 ## Asking the user before running
 
